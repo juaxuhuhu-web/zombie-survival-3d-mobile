@@ -2,6 +2,8 @@
 .gradle/
 build/
 .kotlin/
+node_modules/
+dist/
 
 # Local configuration file (sdk path, etc)
 local.properties

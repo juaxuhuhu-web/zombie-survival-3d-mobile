@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#101615" />
+    <meta name="description" content="A mobile-ready 3D zombie survival game." />
+    <title>Deadzone: Last Light</title>
+  </head>
+  <body>
+    <main id="game" aria-label="Deadzone survival game">
+      <canvas id="world"></canvas>
+      <header class="topbar">
+        <div class="brand"><span class="brand-mark">DZ</span><span>LAST LIGHT <i>FIELD OPS</i></span></div>
+        <div class="wave-readout"><span>WAVE</span><strong id="wave">01</strong></div>
+        <button id="pause" class="icon-button" aria-label="Pause game" title="Pause">Ⅱ</button>
+      </header>
+
+      <section class="status-panel" aria-label="Player status">
+        <div class="status-line"><span>VITALS</span><strong id="health-label">100</strong></div>
+        <div class="bar"><i id="health-bar"></i></div>
+        <div class="status-line secondary"><span>THREATS</span><strong id="threats">0</strong></div>
+      </section>
+
+      <div class="crosshair" aria-hidden="true"><i></i><b></b></div>
+      <div class="wave-callout" id="callout">CLEAR THE BLOCK</div>
+      <div class="pickup-toast" id="toast"></div>
+
+      <section class="bottom-hud" aria-label="Weapon and ammunition">
+        <div class="weapon-card">
+          <div class="weapon-name"><span id="weapon-name">SERVICE PISTOL</span><small id="weapon-mode">SEMI-AUTO</small></div>
+          <div class="ammo"><strong id="ammo-mag">12</strong><span>/</span><span id="ammo-reserve">72</span></div>
+        </div>
+        <div class="weapon-switch" role="group" aria-label="Select weapon">
+          <button class="weapon-slot selected" data-weapon="0" aria-label="Select pistol">01</button>
+          <button class="weapon-slot" data-weapon="1" aria-label="Select rifle">02</button>
+        </div>
+      </section>
+
+      <div class="touch-controls" aria-label="Touch controls">
+        <div id="joystick" class="joystick" aria-label="Movement joystick"><div id="stick" class="stick"></div></div>
+        <div class="right-controls">
+          <button id="reload" class="control-button reload-button" aria-label="Reload">↻</button>
+          <button id="fire" class="control-button fire-button" aria-label="Fire weapon"><span></span></button>
+        </div>
+      </div>
+
+      <div id="overlay" class="overlay">
+        <div class="overlay-content">
+          <div class="eyebrow"><span></span> EMERGENCY BROADCAST · SECTOR 09</div>
+          <h1 id="overlay-title">LAST<br /><em>LIGHT</em></h1>
+          <p id="overlay-copy">The streets are gone. Hold the block until extraction.</p>
+          <button id="start" class="start-button"><span>DEPLOY</span><b>→</b></button>
+          <div class="overlay-foot"><span>FIELD MANUAL 01</span><span>STAY MOVING. STAY ALIVE.</span></div>
+        </div>
+      </div>
+      <div class="screen-grain" aria-hidden="true"></div>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

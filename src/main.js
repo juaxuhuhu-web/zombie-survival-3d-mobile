@@ -36,10 +36,26 @@ const materials = {
   zombie: material('#8b9880'), zombieDark: material('#4b574c'), blood: material('#713e35'),
 };
 
+const solidMeshes = [];
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(180, 180), materials.asphalt);
 ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
+
+const obstacles = [];
+function isBlocked(position, radius) {
+  return obstacles.some((obstacle) => (
+    Math.abs(position.x - obstacle.x) < obstacle.width / 2 + radius
+    && Math.abs(position.z - obstacle.z) < obstacle.depth / 2 + radius
+  ));
+}
+
+function moveWithCollision(position, direction, distance, radius) {
+  const nextX = position.x + direction.x * distance;
+  if (!isBlocked({ x: nextX, z: position.z }, radius)) position.x = nextX;
+  const nextZ = position.z + direction.z * distance;
+  if (!isBlocked({ x: position.x, z: nextZ }, radius)) position.z = nextZ;
+}
 
 function box(parent, size, position, mat, cast = true) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), mat);
@@ -51,10 +67,12 @@ function box(parent, size, position, mat, cast = true) {
 }
 
 function makeBuilding(x, z, width, height, depth, tint, seed) {
+  obstacles.push({ x, z, width, depth });
   const group = new THREE.Group();
   group.position.set(x, 0, z);
   const wall = material(tint);
-  box(group, [width, height, depth], [0, height / 2, 0], wall);
+  const body = box(group, [width, height, depth], [0, height / 2, 0], wall);
+  solidMeshes.push(body);
   box(group, [width + 0.55, 0.38, depth + 0.55], [0, height + 0.19, 0], materials.darkBrick);
   const floors = Math.max(2, Math.floor(height / 2.2));
   const cols = Math.max(2, Math.floor(width / 1.65));
@@ -149,6 +167,8 @@ const zombies = [];
 const pickups = [];
 const tracers = [];
 let health = 100;
+let armor = 0;
+let stamina = 100;
 let wave = 0;
 let score = 0;
 let running = false;
@@ -158,11 +178,15 @@ let spawnClock = 0;
 let shootClock = 0;
 let hitClock = 0;
 let reloadClock = 0;
+let reloadingWeaponIndex = null;
+let meleeClock = 0;
+let staminaDelay = 0;
 let aimYaw = 0;
 let toastClock = 0;
 let stickX = 0;
 let stickY = 0;
 let fireHeld = false;
+let sprintHeld = false;
 let lastTime = 0;
 
 const vectorForward = () => new THREE.Vector3(-Math.sin(aimYaw), 0, -Math.cos(aimYaw));
@@ -175,7 +199,9 @@ function makeZombie(position) {
   group.position.copy(position);
   const body = new THREE.Group();
   group.add(body);
-  const skin = material(['#8b9880', '#998877', '#737f73'][Math.floor(Math.random() * 3)]);
+  const typeRoll = Math.random();
+  const type = wave >= 3 && typeRoll > 0.8 ? 'brute' : wave >= 2 && typeRoll < 0.27 ? 'runner' : 'walker';
+  const skin = material(type === 'brute' ? '#9a7967' : ['#8b9880', '#998877', '#737f73'][Math.floor(Math.random() * 3)]);
   const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.38, 0.64, 3, 7), materials.zombieDark);
   torso.position.y = 1.12;
   torso.castShadow = true;
@@ -183,6 +209,7 @@ function makeZombie(position) {
   const skull = new THREE.Mesh(new THREE.SphereGeometry(0.25, 10, 8), skin);
   skull.position.y = 1.87;
   skull.castShadow = true;
+  skull.userData.hitZone = 'head';
   body.add(skull);
   const eyeMat = new THREE.MeshBasicMaterial({ color: '#cf563a' });
   for (const side of [-1, 1]) {
@@ -196,7 +223,16 @@ function makeZombie(position) {
   limb(body, 0.19, 0.72, 0, 0.78, 0.22, materials.zombieDark, legs);
   limb(body, -0.49, 1.54, 0, 0.72, 0.18, skin, arms);
   limb(body, 0.49, 1.54, 0, 0.72, 0.18, skin, arms);
-  const zombie = { group, body, legs, arms, health: 2 + Math.floor(wave * 0.16), speed: 0.8 + Math.random() * 0.25 + wave * 0.025, phase: Math.random() * 6 };
+  const zombie = {
+    group, body, legs, arms, skin, eyeMat, type,
+    health: (type === 'brute' ? 5 : type === 'runner' ? 1 : 2) + Math.floor(wave * 0.16),
+    speed: (type === 'brute' ? 0.62 : type === 'runner' ? 1.35 : 0.8 + Math.random() * 0.25) + wave * 0.025,
+    damage: type === 'brute' ? 20 : type === 'runner' ? 8 : 12,
+    phase: Math.random() * 6,
+  };
+  body.traverse((child) => {
+    if (child.isMesh) child.userData.enemy = zombie;
+  });
   scene.add(group);
   zombies.push(zombie);
 }
@@ -226,7 +262,11 @@ function toast(message) {
 function updateHud() {
   document.querySelector('#health-label').textContent = Math.ceil(health);
   document.querySelector('#health-bar').style.width = `${Math.max(0, health)}%`;
+  document.querySelector('#armor-label').textContent = String(Math.ceil(armor)).padStart(2, '0');
+  document.querySelector('#stamina-label').textContent = String(Math.ceil(stamina));
+  document.querySelector('#stamina-bar').style.width = `${Math.max(0, stamina)}%`;
   document.querySelector('#threats').textContent = zombies.length + waveRemaining;
+  document.querySelector('#score').textContent = String(score).padStart(6, '0');
   const weapon = weapons[weaponIndex];
   document.querySelector('#weapon-name').textContent = weapon.name;
   document.querySelector('#weapon-mode').textContent = weapon.mode;
@@ -243,16 +283,68 @@ function switchWeapon(index) {
 function startReload() {
   const weapon = weapons[weaponIndex];
   if (!running || reloadClock > 0 || weapon.mag === weapon.magSize || weapon.reserve <= 0) return;
+  reloadingWeaponIndex = weaponIndex;
   reloadClock = weapon.reload;
   toast('RELOADING');
 }
 
 function finishReload() {
-  const weapon = weapons[weaponIndex];
+  const weapon = weapons[reloadingWeaponIndex];
   const amount = Math.min(weapon.magSize - weapon.mag, weapon.reserve);
   weapon.mag += amount;
   weapon.reserve -= amount;
+  reloadingWeaponIndex = null;
   updateHud();
+}
+
+function eliminateZombie(target) {
+  const index = zombies.indexOf(target);
+  if (index < 0) return;
+  zombies.splice(index, 1);
+  scene.remove(target.group);
+  target.skin.dispose();
+  target.eyeMat.dispose();
+  score += target.type === 'brute' ? 150 : target.type === 'runner' ? 125 : 100;
+  if (score % 500 === 0 || Math.random() < 0.24) dropPickup(target.group.position);
+}
+
+function damageZombie(target, amount, headshot = false) {
+  target.health -= amount * (headshot ? 2.5 : 1);
+  if (headshot) toast('HEADSHOT');
+  if (target.health <= 0) eliminateZombie(target);
+}
+
+function takeDamage(amount) {
+  const absorbed = Math.min(armor, amount * 0.75);
+  armor -= absorbed;
+  health = Math.max(0, health - (amount - absorbed));
+  updateHud();
+  if (health <= 0) endGame();
+}
+
+function meleeAttack() {
+  if (!running || meleeClock > 0) return;
+  meleeClock = 0.72;
+  playerArms[0].rotation.x = -1.15;
+  const facing = vectorForward();
+  let closest = null;
+  let closestDistance = 1.9;
+  for (const zombie of zombies) {
+    const offset = zombie.group.position.clone().sub(player.position);
+    const distance = offset.length();
+    if (distance > closestDistance || distance === 0) continue;
+    if (facing.dot(offset.normalize()) < 0.15) continue;
+    closest = zombie;
+    closestDistance = distance;
+  }
+  if (!closest) return;
+  damageZombie(closest, 2.5);
+  if (zombies.includes(closest)) {
+    closest.group.position.addScaledVector(facing, 0.65);
+    toast('INFECTED STAGGERED');
+  } else {
+    toast('MELEE TAKEDOWN');
+  }
 }
 
 function fire() {
@@ -270,9 +362,11 @@ function fire() {
 
   const raycaster = new THREE.Raycaster();
   raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-  const hitMeshes = zombies.flatMap((zombie) => zombie.group.children[0].children.filter((child) => child.isMesh));
-  const hit = raycaster.intersectObjects(hitMeshes, false)[0];
-  const target = hit ? zombies.find((zombie) => zombie.group.children[0].children.includes(hit.object)) : null;
+  const hitMeshes = [];
+  for (const zombie of zombies) zombie.body.traverse((child) => { if (child.isMesh) hitMeshes.push(child); });
+  const hits = raycaster.intersectObjects([...solidMeshes, ...hitMeshes], false);
+  const hit = hits[0];
+  const target = hit?.object.userData.enemy;
   const origin = new THREE.Vector3();
   gun.getWorldPosition(origin);
   const destination = hit ? hit.point : raycaster.ray.at(34, new THREE.Vector3());
@@ -282,46 +376,50 @@ function fire() {
   tracers.push({ mesh: tracer, life: 0.075 });
 
   if (target) {
-    target.health -= weapon.damage;
-    if (target.health <= 0) {
-      const index = zombies.indexOf(target);
-      if (index >= 0) zombies.splice(index, 1);
-      scene.remove(target.group);
-      score += 100;
-      if (score % 300 === 0 || Math.random() < 0.24) dropPickup(target.group.position);
-    }
+    damageZombie(target, weapon.damage, hit.object.userData.hitZone === 'head');
   }
 }
 
 function dropPickup(position) {
   const group = new THREE.Group();
   group.position.copy(position);
-  const crate = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.45, 0.56), materials.sand);
+  const type = Math.random() < 0.45 ? 'medical' : Math.random() < 0.82 ? 'ammo' : 'armor';
+  const crate = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.45, 0.56), type === 'armor' ? materials.metal : materials.sand);
   crate.position.y = 0.28;
   crate.castShadow = true;
   group.add(crate);
-  const cross = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.34, 0.1), material('#d7d0b8'));
+  const markColor = type === 'medical' ? '#d65e47' : type === 'armor' ? '#d3b76e' : '#d7d0b8';
+  const cross = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.34, 0.1), material(markColor));
   cross.position.set(0, 0.55, 0);
   group.add(cross);
-  const crossBar = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.1, 0.1), material('#d7d0b8'));
+  const crossBar = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.1, 0.1), material(markColor));
   crossBar.position.set(0, 0.55, 0);
   group.add(crossBar);
   scene.add(group);
-  pickups.push({ group, phase: Math.random() * 4 });
+  pickups.push({ group, phase: Math.random() * 4, type });
 }
 
 function collectPickups() {
+  const pistolReserveLimit = 180;
+  const rifleReserveLimit = 300;
   for (let index = pickups.length - 1; index >= 0; index -= 1) {
     const pickup = pickups[index];
     if (pickup.group.position.distanceTo(player.position) > 1.6) continue;
-    if (health < 100) {
-      health = Math.min(100, health + 25);
-      toast('MEDICAL SUPPLIES +25');
+    if (pickup.type === 'medical') {
+      if (health >= 100) continue;
+      health = Math.min(100, health + 35);
+      toast('MEDKIT +35');
+    } else if (pickup.type === 'armor') {
+      if (armor >= 60) continue;
+      armor = Math.min(60, armor + 30);
+      toast('ARMOR PLATES +30');
     } else {
-      weapons[0].reserve += 18;
-      weapons[1].reserve += 30;
+      if (weapons[0].reserve >= pistolReserveLimit && weapons[1].reserve >= rifleReserveLimit) continue;
+      weapons[0].reserve = Math.min(pistolReserveLimit, weapons[0].reserve + 18);
+      weapons[1].reserve = Math.min(rifleReserveLimit, weapons[1].reserve + 30);
       toast('AMMUNITION RECOVERED');
     }
+    pickup.group.traverse((child) => { if (child.isMesh && child.material !== materials.sand && child.material !== materials.metal) child.material.dispose(); });
     scene.remove(pickup.group);
     pickups.splice(index, 1);
     updateHud();
@@ -330,6 +428,9 @@ function collectPickups() {
 
 function endGame() {
   running = false;
+  fireHeld = false;
+  sprintHeld = false;
+  document.querySelector('#sprint').classList.remove('active');
   gameOver = true;
   overlay.classList.remove('hidden');
   document.querySelector('#overlay-title').innerHTML = 'SIGNAL<br /><em>LOST</em>';
@@ -338,8 +439,15 @@ function endGame() {
 }
 
 function resetGame() {
-  for (const zombie of zombies) scene.remove(zombie.group);
-  for (const pickup of pickups) scene.remove(pickup.group);
+  for (const zombie of zombies) {
+    scene.remove(zombie.group);
+    zombie.skin.dispose();
+    zombie.eyeMat.dispose();
+  }
+  for (const pickup of pickups) {
+    scene.remove(pickup.group);
+    pickup.group.traverse((child) => { if (child.isMesh && child.material !== materials.sand && child.material !== materials.metal) child.material.dispose(); });
+  }
   for (const tracer of tracers) scene.remove(tracer.mesh);
   zombies.length = 0;
   pickups.length = 0;
@@ -348,11 +456,18 @@ function resetGame() {
   player.rotation.set(0, 0, 0);
   aimYaw = 0;
   health = 100;
+  armor = 0;
+  stamina = 100;
   wave = 0;
   score = 0;
   waveRemaining = 0;
   spawnClock = 0;
   reloadClock = 0;
+  reloadingWeaponIndex = null;
+  meleeClock = 0;
+  staminaDelay = 0;
+  fireHeld = false;
+  sprintHeld = false;
   for (const weapon of weapons) {
     weapon.mag = weapon.magSize;
     weapon.reserve = weapon.name === 'SERVICE PISTOL' ? 72 : 150;
@@ -368,6 +483,9 @@ function resetGame() {
 function pauseGame() {
   if (!running) return;
   running = false;
+  fireHeld = false;
+  sprintHeld = false;
+  document.querySelector('#sprint').classList.remove('active');
   overlay.classList.remove('hidden');
   document.querySelector('#overlay-title').innerHTML = 'HOLD<br /><em>POSITION</em>';
   document.querySelector('#overlay-copy').textContent = 'Catch your breath. The block is still hot.';
@@ -385,6 +503,7 @@ startButton.addEventListener('click', () => {
 document.querySelector('#pause').addEventListener('click', pauseGame);
 document.querySelector('#reload').addEventListener('pointerdown', (event) => { event.preventDefault(); startReload(); });
 document.querySelectorAll('.weapon-slot').forEach((button) => button.addEventListener('click', () => switchWeapon(Number(button.dataset.weapon))));
+document.querySelector('#melee').addEventListener('pointerdown', (event) => { event.preventDefault(); meleeAttack(); });
 
 const joystick = document.querySelector('#joystick');
 const stick = document.querySelector('#stick');
@@ -417,10 +536,29 @@ joystick.addEventListener('pointerup', releaseStick);
 joystick.addEventListener('pointercancel', releaseStick);
 
 const fireButton = document.querySelector('#fire');
-fireButton.addEventListener('pointerdown', (event) => { event.preventDefault(); fireHeld = true; fire(); });
+fireButton.addEventListener('pointerdown', (event) => {
+  event.preventDefault();
+  fireButton.setPointerCapture(event.pointerId);
+  fireHeld = true;
+  fire();
+});
 fireButton.addEventListener('pointerup', () => { fireHeld = false; });
 fireButton.addEventListener('pointercancel', () => { fireHeld = false; });
 fireButton.addEventListener('lostpointercapture', () => { fireHeld = false; });
+
+const sprintButton = document.querySelector('#sprint');
+function setSprint(held) {
+  sprintHeld = held;
+  sprintButton.classList.toggle('active', held);
+}
+sprintButton.addEventListener('pointerdown', (event) => {
+  event.preventDefault();
+  sprintButton.setPointerCapture(event.pointerId);
+  setSprint(true);
+});
+sprintButton.addEventListener('pointerup', () => setSprint(false));
+sprintButton.addEventListener('pointercancel', () => setSprint(false));
+sprintButton.addEventListener('lostpointercapture', () => setSprint(false));
 
 let aimPointer = null;
 let lastAimX = 0;
@@ -443,6 +581,7 @@ window.addEventListener('keydown', (event) => {
   if (event.repeat) return;
   if (event.code === 'KeyR') startReload();
   if (event.code === 'KeyQ') switchWeapon(1 - weaponIndex);
+  if (event.code === 'KeyE') meleeAttack();
   if (event.code === 'Space') { event.preventDefault(); fireHeld = true; fire(); }
   if (event.code === 'Escape') pauseGame();
 });
@@ -455,17 +594,29 @@ canvas.addEventListener('contextmenu', (event) => event.preventDefault());
 function update(delta, elapsed) {
   shootClock = Math.max(0, shootClock - delta);
   hitClock = Math.max(0, hitClock - delta);
+  meleeClock = Math.max(0, meleeClock - delta);
   if (toastClock > 0) {
     toastClock -= delta;
     if (toastClock <= 0) document.querySelector('#toast').classList.remove('visible');
   }
   if (!running) return;
 
-  if (fireHeld) fire();
+  if (fireHeld && weapons[weaponIndex].mode === 'FULL-AUTO') fire();
   const keys = new Set();
   if (window.keyboardState) for (const code of window.keyboardState) keys.add(code);
   const keyX = Number(keys.has('KeyD') || keys.has('ArrowRight')) - Number(keys.has('KeyA') || keys.has('ArrowLeft'));
   const keyY = Number(keys.has('KeyW') || keys.has('ArrowUp')) - Number(keys.has('KeyS') || keys.has('ArrowDown'));
+  const moving = stickX !== 0 || stickY !== 0 || keyX !== 0 || keyY !== 0;
+  const sprinting = (sprintHeld || keys.has('ShiftLeft') || keys.has('ShiftRight')) && moving && stamina > 0;
+  if (sprinting) {
+    stamina = Math.max(0, stamina - delta * 30);
+    staminaDelay = 0.85;
+  } else if (staminaDelay > 0) {
+    staminaDelay = Math.max(0, staminaDelay - delta);
+  } else {
+    stamina = Math.min(100, stamina + delta * 22);
+  }
+  sprintButton.classList.toggle('active', sprinting);
   let moveX = stickX + keyX;
   let moveY = stickY + keyY;
   const length = Math.hypot(moveX, moveY);
@@ -475,7 +626,7 @@ function update(delta, elapsed) {
   const direction = right.multiplyScalar(moveX).add(forward.multiplyScalar(moveY));
   if (direction.lengthSq() > 0.01) {
     direction.normalize();
-    player.position.addScaledVector(direction, delta * 4.2);
+    moveWithCollision(player.position, direction, delta * (sprinting ? 7 : 4.2), 0.42);
     player.rotation.y = Math.atan2(-direction.x, -direction.z);
     const gait = Math.sin(elapsed * 10) * Math.min(1, Math.hypot(moveX, moveY));
     playerLegs[0].rotation.x = gait * 0.58;
@@ -502,9 +653,15 @@ function update(delta, elapsed) {
   }
   spawnClock -= delta;
   if (waveRemaining > 0 && spawnClock <= 0) {
-    const angle = Math.random() * Math.PI * 2;
-    const distance = 15 + Math.random() * 7;
-    const position = player.position.clone().add(new THREE.Vector3(Math.sin(angle) * distance, 0, Math.cos(angle) * distance));
+    let position;
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 15 + Math.random() * 7;
+      position = player.position.clone().add(new THREE.Vector3(Math.sin(angle) * distance, 0, Math.cos(angle) * distance));
+      position.x = THREE.MathUtils.clamp(position.x, -21, 21);
+      position.z = THREE.MathUtils.clamp(position.z, -24, 23);
+      if (!isBlocked(position, 0.45)) break;
+    }
     makeZombie(position);
     waveRemaining -= 1;
     spawnClock = Math.max(0.58, 1.45 - wave * 0.035);
@@ -514,7 +671,7 @@ function update(delta, elapsed) {
     const distance = toPlayer.length();
     if (distance > 0.6) {
       toPlayer.normalize();
-      zombie.group.position.addScaledVector(toPlayer, zombie.speed * delta);
+      moveWithCollision(zombie.group.position, toPlayer, zombie.speed * delta, 0.42);
       zombie.group.rotation.y = Math.atan2(-toPlayer.x, -toPlayer.z);
     }
     const stride = Math.sin(elapsed * 7 + zombie.phase);
@@ -523,12 +680,12 @@ function update(delta, elapsed) {
     zombie.arms[0].rotation.x = -1.0 + stride * 0.18;
     zombie.arms[1].rotation.x = -1.0 - stride * 0.18;
     if (distance < 1.35 && hitClock <= 0) {
-      health = Math.max(0, health - 12);
+      takeDamage(zombie.damage);
       hitClock = 0.8;
-      updateHud();
-      if (health <= 0) endGame();
+      if (health <= 0) break;
     }
   }
+  if (gameOver) return;
   if (waveRemaining === 0 && zombies.length === 0) {
     spawnClock -= delta;
     if (spawnClock <= 0) beginWave();

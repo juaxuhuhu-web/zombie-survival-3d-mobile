@@ -19,7 +19,11 @@
       <section class="status-panel" aria-label="Player status">
         <div class="status-line"><span>VITALS</span><strong id="health-label">100</strong></div>
         <div class="bar"><i id="health-bar"></i></div>
+        <div class="status-line"><span>ARMOR</span><strong id="armor-label">00</strong></div>
+        <div class="status-line"><span>STAMINA</span><strong id="stamina-label">100</strong></div>
+        <div class="bar stamina-bar"><i id="stamina-bar"></i></div>
         <div class="status-line secondary"><span>THREATS</span><strong id="threats">0</strong></div>
+        <div class="status-line secondary score-line"><span>SCORE</span><strong id="score">000000</strong></div>
       </section>
 
       <div class="crosshair" aria-hidden="true"><i></i><b></b></div>
@@ -38,9 +42,13 @@
       </section>
 
       <div class="touch-controls" aria-label="Touch controls">
-        <div id="joystick" class="joystick" aria-label="Movement joystick"><div id="stick" class="stick"></div></div>
+        <div class="left-controls">
+          <div id="joystick" class="joystick" aria-label="Movement joystick"><div id="stick" class="stick"></div></div>
+          <button id="sprint" class="control-button sprint-button" aria-label="Sprint" title="Sprint">»</button>
+        </div>
         <div class="right-controls">
           <button id="reload" class="control-button reload-button" aria-label="Reload">↻</button>
+          <button id="melee" class="control-button melee-button" aria-label="Melee attack" title="Melee attack">✕</button>
           <button id="fire" class="control-button fire-button" aria-label="Fire weapon"><span></span></button>
         </div>
       </div>
@@ -49,7 +57,7 @@
         <div class="overlay-content">
           <div class="eyebrow"><span></span> EMERGENCY BROADCAST · SECTOR 09</div>
           <h1 id="overlay-title">LAST<br /><em>LIGHT</em></h1>
-          <p id="overlay-copy">The streets are gone. Hold the block until extraction.</p>
+          <p id="overlay-copy">The streets are gone. Hold the block until extraction.<br />Move with the stick · drag to aim · fire to survive.</p>
           <button id="start" class="start-button"><span>DEPLOY</span><b>→</b></button>
           <div class="overlay-foot"><span>FIELD MANUAL 01</span><span>STAY MOVING. STAY ALIVE.</span></div>
         </div>

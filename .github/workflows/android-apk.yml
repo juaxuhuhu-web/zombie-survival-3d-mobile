@@ -21,14 +21,13 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 21
       - uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
       - run: npm ci
       - run: npm run build
-      - run: npx cap add android
-      - run: npx cap sync android
+      - run: npm run android
       - run: ./android/gradlew -p android assembleDebug
       - uses: actions/upload-artifact@v4
         with:

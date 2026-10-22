@@ -1,12 +1,12 @@
 # Deadzone: Last Light
 
-A mobile-first, third-person 3D zombie survival prototype. The street, buildings, props, player, zombies, and weapons are built from real-time 3D geometry; the game runs offline once loaded.
+A mobile-first, third-person 3D zombie survival game. The street, buildings, props, player, zombies, and weapons are built from real-time 3D geometry; gameplay runs offline once installed.
 
 ## Play
 
-Run `npm install` and `npm run dev`, then open the printed address in a mobile browser. On a phone, move with the lower-left joystick, drag on the right side of the screen to aim, and hold fire. Tap reload or a weapon slot to change gear. On desktop, use WASD or arrow keys to move, right-mouse drag to aim, Space to fire, R to reload, and Q to switch weapons.
+Run `npm install` and `npm run dev`, then open the printed address in a mobile browser. On a phone, move with the lower-left joystick, hold sprint, drag on the right side of the screen to aim, and use the fire, melee, reload, and weapon buttons. On desktop, use WASD or arrow keys to move, Shift to sprint, right-mouse drag to aim, Space to fire, E to melee, R to reload, and Q to switch weapons.
 
-Waves grow tougher over time. Eliminate the infected, collect supply crates, and keep your health above zero.
+Survive escalating waves of walkers, fast runners, and armored brutes. Aim for headshots, use melee when enemies close in, manage stamina and ammunition, and collect medical, armor, and ammo drops to stay alive.
 
 ## Android APK
 
@@ -18,13 +18,12 @@ The APK is a debug build, suitable for testing and sideloading, not Play Store r
 
 ## Build locally
 
-Requires Node.js 20+ and an Android SDK with the licenses accepted.
+Requires Node.js 20+, JDK 21, and Android SDK platform 35/build-tools 35.0.0 with licenses accepted.
 
 ```sh
 npm ci
 npm run build
-npx cap add android
-npx cap sync android
+npm run android
 cd android && ./gradlew assembleDebug
 ```
 

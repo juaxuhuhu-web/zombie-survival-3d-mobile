@@ -1,7 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
-
 :root {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
   color: #f3f0e4;
   background: #101615;
   font-synthesis: none;
@@ -25,17 +23,20 @@ button { color: inherit; font: inherit; }
 .topbar { position: absolute; z-index: 4; inset: calc(16px + var(--safe-top)) 18px auto; display: flex; align-items: center; gap: 18px; height: 44px; }
 .brand { display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-shadow: 0 1px 8px #171b19; }
 .brand i { display: block; margin-top: 3px; color: #c6c7bc; font-size: 8px; font-style: normal; font-weight: 400; }
-.brand-mark { display: grid; width: 35px; aspect-ratio: 1; place-items: center; border: 1px solid var(--paper); color: var(--accent); font-family: 'Barlow Condensed', sans-serif; font-size: 17px; font-weight: 900; }
+.brand-mark { display: grid; width: 35px; aspect-ratio: 1; place-items: center; border: 1px solid var(--paper); color: var(--accent); font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif; font-size: 17px; font-weight: 900; }
 .wave-readout { display: flex; align-items: baseline; gap: 8px; margin-left: auto; padding: 4px 11px; border-left: 1px solid var(--line); text-shadow: 0 1px 8px #171b19; }
 .wave-readout span, .status-line { color: var(--muted); font-size: 9px; letter-spacing: 0.11em; }
-.wave-readout strong { font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 700; }
+.wave-readout strong { font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif; font-size: 24px; font-weight: 700; }
 .icon-button { width: 38px; height: 38px; border: 1px solid var(--line); background: rgba(18, 22, 20, 0.48); font-size: 16px; }
 .status-panel { position: absolute; z-index: 4; top: calc(80px + var(--safe-top)); left: 18px; width: 142px; padding: 10px 11px; background: rgba(19, 24, 22, 0.62); backdrop-filter: blur(8px); }
 .status-line { display: flex; justify-content: space-between; align-items: center; }
 .status-line strong { color: var(--paper); font-size: 11px; font-weight: 500; }
 .bar { height: 4px; margin: 8px 0 11px; background: rgba(240, 239, 226, 0.25); }
 .bar i { display: block; width: 100%; height: 100%; background: #d65e47; transition: width 0.2s; }
+.stamina-bar { margin: 8px 0 11px; }
+.stamina-bar i { background: #d3b76e; }
 .status-line.secondary { padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.13); }
+.status-line.score-line { margin-top: 7px; }
 .crosshair { position: absolute; z-index: 2; top: 50%; left: 50%; width: 19px; height: 19px; transform: translate(-50%, -50%); pointer-events: none; opacity: 0.78; }
 .crosshair::before, .crosshair::after { position: absolute; content: ''; background: #f3f0e4; box-shadow: 0 0 3px #101615; }
 .crosshair::before { top: 9px; left: 0; width: 19px; height: 1px; }
@@ -51,17 +52,21 @@ button { color: inherit; font: inherit; }
 .weapon-name { display: flex; flex-direction: column; gap: 3px; font-size: 9px; font-weight: 600; letter-spacing: 0.06em; }
 .weapon-name small { color: #aeb2a8; font-size: 7px; font-weight: 400; }
 .ammo { display: flex; align-items: baseline; gap: 5px; margin-top: 5px; color: #bfc0b7; font-size: 11px; }
-.ammo strong { color: var(--paper); font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 700; }
+.ammo strong { color: var(--paper); font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif; font-size: 24px; font-weight: 700; }
 .weapon-switch { display: flex; gap: 4px; }
 .weapon-slot { width: 37px; height: 35px; border: 1px solid var(--line); background: rgba(17, 22, 20, 0.74); color: #c4c5bb; font-size: 10px; }
 .weapon-slot.selected { border-color: var(--accent); color: #fff; }
 .touch-controls { position: absolute; z-index: 4; inset: auto 18px calc(19px + var(--safe-bottom)) 18px; display: flex; align-items: end; justify-content: space-between; pointer-events: none; }
+.left-controls { display: flex; align-items: end; gap: 8px; pointer-events: auto; }
 .joystick { position: relative; width: clamp(96px, 25vw, 132px); aspect-ratio: 1; border: 1px solid rgba(245, 243, 230, 0.5); border-radius: 50%; background: rgba(24, 29, 26, 0.28); pointer-events: auto; touch-action: none; }
 .joystick::before { position: absolute; inset: 24%; border: 1px solid rgba(245, 243, 230, 0.19); border-radius: 50%; content: ''; }
 .stick { position: absolute; top: 50%; left: 50%; width: 39%; aspect-ratio: 1; border: 1px solid rgba(255, 255, 255, 0.85); border-radius: 50%; background: rgba(230, 230, 216, 0.37); transform: translate(0, 0); }
-.right-controls { display: flex; align-items: end; gap: 13px; pointer-events: auto; }
+.right-controls { display: flex; align-items: end; gap: 8px; pointer-events: auto; }
 .control-button { display: grid; place-items: center; border: 1px solid rgba(245, 243, 230, 0.55); background: rgba(24, 29, 26, 0.48); touch-action: none; }
 .reload-button { width: 43px; height: 43px; border-radius: 50%; font-size: 24px; }
+.sprint-button, .melee-button { width: 42px; height: 42px; flex: 0 0 42px; border-radius: 50%; font-size: 19px; }
+.sprint-button.active { border-color: #d3b76e; background: rgba(150, 121, 50, 0.62); }
+.melee-button { border-color: rgba(229, 126, 89, 0.8); }
 .fire-button { width: clamp(68px, 18vw, 88px); aspect-ratio: 1; border: 2px solid rgba(255,255,255,0.85); border-radius: 50%; background: rgba(193, 65, 48, 0.56); }
 .fire-button span { width: 27%; aspect-ratio: 1; border: 2px solid #fff1e2; border-radius: 50%; }
 .overlay { position: absolute; z-index: 8; inset: 0; display: grid; place-items: center; padding: 24px; background: linear-gradient(90deg, rgba(11, 16, 15, 0.87), rgba(11, 16, 15, 0.48) 65%, rgba(11, 16, 15, 0.15)), linear-gradient(0deg, rgba(9, 13, 12, 0.65), transparent 55%); transition: opacity 0.35s, visibility 0.35s; }
@@ -69,7 +74,7 @@ button { color: inherit; font: inherit; }
 .overlay-content { width: min(100%, 460px); margin-left: min(9vw, 90px); animation: appear 0.75s ease both; }
 .eyebrow { display: flex; align-items: center; gap: 8px; color: #c4c4b9; font-size: 8px; letter-spacing: 0.1em; }
 .eyebrow span { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
-h1 { margin: 15px 0 5px; font-family: 'Barlow Condensed', sans-serif; font-size: clamp(72px, 18vw, 112px); font-weight: 900; line-height: 0.74; letter-spacing: 0; }
+h1 { margin: 15px 0 5px; font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif; font-size: clamp(72px, 18vw, 112px); font-weight: 900; line-height: 0.74; letter-spacing: 0; }
 h1 em { color: var(--accent); font-style: normal; }
 .overlay-content p { max-width: 280px; margin: 19px 0 22px; color: #c4c6bc; font-size: 10px; line-height: 1.8; }
 .start-button { display: flex; width: 172px; height: 48px; align-items: center; justify-content: space-between; padding: 0 15px; border: 0; background: var(--accent); color: #fff8ed; font-size: 10px; font-weight: 600; letter-spacing: 0.15em; }
@@ -86,12 +91,23 @@ h1 em { color: var(--accent); font-style: normal; }
 @media (max-width: 600px) and (orientation: portrait) {
   .bottom-hud { top: calc(174px + var(--safe-top)); right: 18px; }
 }
+@media (max-width: 360px) {
+  .touch-controls { right: 10px; left: 10px; }
+  .left-controls { gap: 5px; }
+  .joystick { width: 86px; }
+  .sprint-button, .melee-button, .reload-button { width: 34px; height: 34px; flex-basis: 34px; }
+  .right-controls { gap: 4px; }
+  .fire-button { width: 58px; }
+}
 @media (max-height: 520px) {
   .topbar { top: calc(8px + var(--safe-top)); }
   .status-panel { top: calc(60px + var(--safe-top)); }
   .bottom-hud { top: calc(59px + var(--safe-top)); }
   .touch-controls { bottom: calc(9px + var(--safe-bottom)); }
   .joystick { width: 82px; }
+  .sprint-button, .melee-button { width: 36px; height: 36px; flex-basis: 36px; }
+  .right-controls { gap: 5px; }
+  .reload-button { width: 36px; height: 36px; }
   .fire-button { width: 62px; }
   .overlay-content { margin-left: 0; }
   h1 { margin-top: 8px; font-size: 66px; }

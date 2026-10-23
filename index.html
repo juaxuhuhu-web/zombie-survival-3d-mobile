@@ -4,62 +4,67 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#101615" />
-    <meta name="description" content="A mobile-ready 3D zombie survival game." />
+    <meta name="description" content="An open-world zombie survival RPG." />
     <title>Deadzone: Last Light</title>
   </head>
   <body>
-    <main id="game" aria-label="Deadzone survival game">
-      <canvas id="world"></canvas>
+    <main id="game" aria-label="Deadzone open-world survival game">
+      <canvas id="world" aria-label="Survival world"></canvas>
       <header class="topbar">
-        <div class="brand"><span class="brand-mark">DZ</span><span>LAST LIGHT <i>FIELD OPS</i></span></div>
-        <div class="wave-readout"><span>WAVE</span><strong id="wave">01</strong></div>
-        <button id="pause" class="icon-button" aria-label="Pause game" title="Pause">Ⅱ</button>
+        <div class="brand"><span class="brand-mark">DZ</span><span>LAST LIGHT <i>OPEN WORLD SURVIVAL</i></span></div>
+        <div class="world-readout"><strong id="biome">WILDERNESS</strong><span id="clock">DAY 01 · 08:00</span></div>
+        <button id="pause" class="icon-button" aria-label="Pause game">Ⅱ</button>
       </header>
 
-      <section class="status-panel" aria-label="Player status">
-        <div class="status-line"><span>VITALS</span><strong id="health-label">100</strong></div>
+      <section class="vitals-panel" aria-label="Survival status">
+        <div class="status-line"><span>HEALTH</span><strong id="health-label">100</strong></div>
         <div class="bar"><i id="health-bar"></i></div>
-        <div class="status-line"><span>ARMOR</span><strong id="armor-label">00</strong></div>
+        <div class="status-line"><span>HUNGER</span><strong id="hunger-label">82</strong></div>
+        <div class="bar hunger"><i id="hunger-bar"></i></div>
+        <div class="status-line"><span>THIRST</span><strong id="thirst-label">74</strong></div>
+        <div class="bar thirst"><i id="thirst-bar"></i></div>
         <div class="status-line"><span>STAMINA</span><strong id="stamina-label">100</strong></div>
-        <div class="bar stamina-bar"><i id="stamina-bar"></i></div>
-        <div class="status-line secondary"><span>THREATS</span><strong id="threats">0</strong></div>
-        <div class="status-line secondary score-line"><span>SCORE</span><strong id="score">000000</strong></div>
+        <div class="bar stamina"><i id="stamina-bar"></i></div>
+        <div class="status-line small-status"><span>CORE TEMP</span><strong id="temperature-label">37.0°</strong></div>
+        <div class="status-line small-status"><span>INFECTION</span><strong id="infection-label">0%</strong></div>
       </section>
 
-      <div class="crosshair" aria-hidden="true"><i></i><b></b></div>
-      <div class="wave-callout" id="callout">CLEAR THE BLOCK</div>
-      <div class="pickup-toast" id="toast"></div>
+      <section class="world-note" aria-live="polite">
+        <span class="live-dot"></span><strong id="world-note">Find water, food, and shelter. The infected are already here.</strong>
+      </section>
+      <div id="message" class="message" role="status"></div>
 
-      <section class="bottom-hud" aria-label="Weapon and ammunition">
-        <div class="weapon-card">
-          <div class="weapon-name"><span id="weapon-name">SERVICE PISTOL</span><small id="weapon-mode">SEMI-AUTO</small></div>
-          <div class="ammo"><strong id="ammo-mag">12</strong><span>/</span><span id="ammo-reserve">72</span></div>
-        </div>
-        <div class="weapon-switch" role="group" aria-label="Select weapon">
-          <button class="weapon-slot selected" data-weapon="0" aria-label="Select pistol">01</button>
-          <button class="weapon-slot" data-weapon="1" aria-label="Select rifle">02</button>
+      <section class="inventory-panel" aria-label="Quick inventory">
+        <div class="inventory-heading"><span>FIELD PACK</span><button id="eat" aria-label="Consume selected item">USE</button></div>
+        <div id="quickbar" class="quickbar"></div>
+        <div id="inventory-weight" class="inventory-weight">12 SLOTS · FIELD GEAR</div>
+        <div class="craft-row">
+          <button id="craft-spear">CRAFT SPEAR</button>
+          <button id="craft-fire">CAMPFIRE KIT</button>
         </div>
       </section>
 
-      <div class="touch-controls" aria-label="Touch controls">
+      <div class="interaction-prompt" id="prompt"></div>
+      <div class="touch-controls" aria-label="Touch movement and actions">
         <div class="left-controls">
-          <div id="joystick" class="joystick" aria-label="Movement joystick"><div id="stick" class="stick"></div></div>
-          <button id="sprint" class="control-button sprint-button" aria-label="Sprint" title="Sprint">»</button>
+          <div id="joystick" class="joystick" aria-label="Movement stick"><div id="stick" class="stick"></div></div>
+          <button id="sprint" class="control-button sprint-button" aria-label="Hold to sprint">»</button>
         </div>
+        <div id="look-joystick" class="joystick look-joystick" aria-label="Camera look stick"><div id="look-stick" class="stick"></div></div>
         <div class="right-controls">
-          <button id="reload" class="control-button reload-button" aria-label="Reload">↻</button>
-          <button id="melee" class="control-button melee-button" aria-label="Melee attack" title="Melee attack">✕</button>
-          <button id="fire" class="control-button fire-button" aria-label="Fire weapon"><span></span></button>
+          <button id="crouch" class="control-button crouch-button" aria-label="Toggle crouch">⌄</button>
+          <button id="interact" class="control-button interact-button" aria-label="Gather or interact">USE</button>
+          <button id="melee" class="control-button melee-button" aria-label="Melee attack">✕</button>
         </div>
       </div>
 
       <div id="overlay" class="overlay">
         <div class="overlay-content">
-          <div class="eyebrow"><span></span> EMERGENCY BROADCAST · SECTOR 09</div>
-          <h1 id="overlay-title">LAST<br /><em>LIGHT</em></h1>
-          <p id="overlay-copy">The streets are gone. Hold the block until extraction.<br />Move with the stick · drag to aim · fire to survive.</p>
-          <button id="start" class="start-button"><span>DEPLOY</span><b>→</b></button>
-          <div class="overlay-foot"><span>FIELD MANUAL 01</span><span>STAY MOVING. STAY ALIVE.</span></div>
+          <div class="eyebrow"><span></span> SURVIVAL LOG · DAY 01</div>
+          <h1 id="overlay-title">THE<br /><em>LONG DARK</em></h1>
+          <p id="overlay-copy">No safe zones. No waves. Find clean water, scavenge what remains, and stay quiet when the infected are near.</p>
+          <button id="start" class="start-button"><span>ENTER THE WORLD</span><b>→</b></button>
+          <div class="overlay-foot"><span>LEFT STICK · MOVE</span><span>RIGHT SIDE · LOOK</span></div>
         </div>
       </div>
       <div class="screen-grain" aria-hidden="true"></div>
